@@ -128,13 +128,29 @@ def guess_device_type(role, hostname, vendor):
 
 
 # ==============================
+# Port to service mapping
+# ==============================
+# Esta función traduce un puerto conocido a su servicio más común.
+
+def get_service_name(port):
+    port_map = {
+        22: "SSH",
+        53: "DNS",
+        80: "HTTP",
+        443: "HTTPS",
+        445: "SMB",
+        3389: "RDP",
+        554: "RTSP"
+    }
+
+    return port_map.get(port, "Unknown")
+
+
+# ==============================
 # Port scanning
 # ==============================
 # Esta función revisa algunos puertos comunes para un host.
-#
-# IMPORTANTE:
-# usamos un scanner separado del discovery scanner para no
-# sobrescribir los resultados del escaneo principal.
+# Usa un scanner separado para no sobrescribir el discovery.
 
 def scan_common_ports(host):
     common_ports = "22,53,80,443,445,3389,554"
@@ -153,7 +169,8 @@ def scan_common_ports(host):
                 for port in sorted(ports):
                     state = port_scanner[host][protocol][port].get("state", "")
                     if state == "open":
-                        open_ports.append(str(port))
+                        service_name = get_service_name(port)
+                        open_ports.append(f"{port}({service_name})")
 
     except Exception:
         pass
@@ -225,7 +242,7 @@ def print_table(devices):
 # 2. detecta red/gateway/IP local
 # 3. ejecuta discovery
 # 4. clasifica rol y tipo de dispositivo
-# 5. escanea puertos comunes
+# 5. escanea puertos comunes con nombre de servicio
 # 6. imprime tabla
 # 7. guarda JSON y CSV
 
@@ -240,9 +257,7 @@ def main():
     detected_network, gateway, local_ip = detect_network_gateway_and_local_ip()
     network = args.network if args.network else detected_network
 
-    # Scanner principal solo para discovery
     discovery_scanner = nmap.PortScanner()
-
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     print(f"\nScanning network: {network}")
@@ -250,10 +265,8 @@ def main():
     print(f"Local host IP: {local_ip}")
     print(f"Scan time: {timestamp}\n")
 
-    # Fase 1: discovery de hosts activos
+    # Fase 1: descubrir hosts activos
     discovery_scanner.scan(hosts=network, arguments="-sn")
-
-    # Guardamos la lista de hosts ANTES de hacer otros escaneos
     discovered_hosts = discovery_scanner.all_hosts()
 
     devices = []
@@ -269,7 +282,7 @@ def main():
         role = determine_role(host, gateway, local_ip)
         device_type = guess_device_type(role, hostname, vendor)
 
-        # Fase 2: escaneo de puertos usando scanner separado
+        # Fase 2: escanear puertos comunes y traducir servicios
         open_ports = scan_common_ports(host)
 
         device = {

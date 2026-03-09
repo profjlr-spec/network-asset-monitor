@@ -21,7 +21,7 @@ def detect_network_gateway_and_local_ip():
             f"ip -o -f inet addr show {interface}", shell=True, text=True
         ).strip()
 
-        cidr = ip_info.split()[3]   # example: 10.0.0.221/24
+        cidr = ip_info.split()[3]
         interface_ip = cidr.split("/")[0]
         network = str(ipaddress.ip_interface(cidr).network)
 
@@ -36,8 +36,44 @@ def determine_role(ip, gateway, local_ip):
         return "Gateway"
     elif ip == local_ip:
         return "Local Host"
-    else:
-        return "Device"
+    return "Device"
+
+
+def print_table(devices):
+    headers = ["IP", "ROLE", "HOSTNAME", "STATE", "MAC", "VENDOR"]
+
+    rows = []
+    for device in devices:
+        rows.append([
+            device["ip"],
+            device["role"],
+            device["hostname"],
+            device["state"],
+            device["mac"],
+            device["vendor"]
+        ])
+
+    col_widths = []
+    for i, header in enumerate(headers):
+        max_width = len(header)
+        for row in rows:
+            max_width = max(max_width, len(str(row[i])))
+        col_widths.append(max_width)
+
+    header_line = "  ".join(
+        header.ljust(col_widths[i]) for i, header in enumerate(headers)
+    )
+    separator_line = "  ".join(
+        "-" * col_widths[i] for i in range(len(headers))
+    )
+
+    print(header_line)
+    print(separator_line)
+
+    for row in rows:
+        print("  ".join(
+            str(row[i]).ljust(col_widths[i]) for i in range(len(headers))
+        ))
 
 
 def main():
@@ -87,14 +123,7 @@ def main():
     devices.sort(key=lambda d: ipaddress.ip_address(d["ip"]))
 
     print("Devices discovered:\n")
-    for device in devices:
-        print(
-            f"IP: {device['ip']:<15} "
-            f"Role: {device['role']:<11} "
-            f"Hostname: {device['hostname']:<15} "
-            f"MAC: {device['mac']:<17} "
-            f"Vendor: {device['vendor']}"
-        )
+    print_table(devices)
 
     with open("scan_results.json", "w") as json_file:
         json.dump(devices, json_file, indent=4)

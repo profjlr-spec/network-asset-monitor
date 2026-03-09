@@ -12,13 +12,17 @@ This project was built to strengthen practical skills in:
 ## Features
 
 - Automatically detects the local network
+- Detects the default gateway
+- Detects the local host IP
 - Scans for active hosts using Nmap
 - Identifies:
   - IP address
-  - Hostname
-  - Device state
+  - device role
+  - hostname
+  - device state
   - MAC address
-  - Vendor (when available)
+  - vendor (when available)
+- Displays results in a formatted terminal table
 - Exports scan results to:
   - JSON
   - CSV

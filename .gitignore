@@ -1,5 +1,6 @@
 venv/
 __pycache__/
 *.pyc
+
 scan_results.json
 scan_results.csv

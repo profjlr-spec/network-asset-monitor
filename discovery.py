@@ -1,13 +1,6 @@
 # ==============================
 # Imports
 # ==============================
-# Estas librerías permiten:
-# - ejecutar Nmap desde Python
-# - guardar resultados en JSON y CSV
-# - aceptar argumentos desde la terminal
-# - ejecutar comandos de Linux
-# - trabajar con redes/IPs
-# - agregar fecha y hora al escaneo
 
 import nmap
 import json
@@ -21,10 +14,6 @@ from datetime import datetime
 # ==============================
 # Network detection functions
 # ==============================
-# Esta función detecta automáticamente:
-# - la red local
-# - el gateway
-# - la IP local del equipo actual
 
 def detect_network_gateway_and_local_ip():
     try:
@@ -53,10 +42,6 @@ def detect_network_gateway_and_local_ip():
 # ==============================
 # Device role classification
 # ==============================
-# Esta función clasifica el rol del dispositivo:
-# - Gateway
-# - Local Host
-# - Device
 
 def determine_role(ip, gateway, local_ip):
     if ip == gateway:
@@ -69,11 +54,6 @@ def determine_role(ip, gateway, local_ip):
 # ==============================
 # Device type guessing
 # ==============================
-# Esta función intenta adivinar el tipo de dispositivo
-# basándose en:
-# - rol
-# - hostname
-# - vendor
 
 def guess_device_type(role, hostname, vendor):
     hostname_lower = hostname.lower() if hostname != "N/A" else ""
@@ -130,7 +110,6 @@ def guess_device_type(role, hostname, vendor):
 # ==============================
 # Port to service mapping
 # ==============================
-# Esta función traduce un puerto conocido a su servicio más común.
 
 def get_service_name(port):
     port_map = {
@@ -142,15 +121,12 @@ def get_service_name(port):
         3389: "RDP",
         554: "RTSP"
     }
-
     return port_map.get(port, "Unknown")
 
 
 # ==============================
-# Port scanning
+# Common port scanning
 # ==============================
-# Esta función revisa algunos puertos comunes para un host.
-# Usa un scanner separado para no sobrescribir el discovery.
 
 def scan_common_ports(host):
     common_ports = "22,53,80,443,445,3389,554"
@@ -184,7 +160,6 @@ def scan_common_ports(host):
 # ==============================
 # OS detection
 # ==============================
-# Esta función intenta adivinar el sistema operativo del host.
 
 def detect_os_guess(host):
     try:
@@ -193,7 +168,6 @@ def detect_os_guess(host):
 
         if host in os_scanner.all_hosts():
             os_matches = os_scanner[host].get("osmatch", [])
-
             if os_matches:
                 return os_matches[0].get("name", "Unknown")
 
@@ -206,32 +180,24 @@ def detect_os_guess(host):
 # ==============================
 # OS guess simplification
 # ==============================
-# Resume la salida larga de Nmap para una tabla más limpia.
 
 def simplify_os_guess(os_guess):
     guess = os_guess.lower()
 
     if guess == "unknown":
         return "Unknown"
-
     if "windows" in guess or "microsoft" in guess:
         return "Windows"
-
     if "mac os" in guess or "macos" in guess or "darwin" in guess or "ios" in guess:
         return "macOS / iOS"
-
     if "embedded" in guess and "linux" in guess:
         return "Embedded Linux"
-
     if "linux" in guess:
         return "Linux"
-
     if "router" in guess or "switch" in guess or "network" in guess or "cisco" in guess:
         return "Router / Network OS"
-
     if "printer" in guess:
         return "Printer"
-
     if "bsd" in guess:
         return "BSD / Unix-like"
 
@@ -241,29 +207,74 @@ def simplify_os_guess(os_guess):
 # ==============================
 # OS detection decision
 # ==============================
-# Esta función decide si vale la pena correr OS detection.
-#
-# Solo lo hacemos si:
-# - el host es Gateway
-# - el host es Local Host
-# - el host tiene puertos abiertos
-#
-# Esto hace el script mucho más rápido.
 
 def should_run_os_detection(role, open_ports):
     if role in ["Gateway", "Local Host"]:
         return True
-
     if open_ports != "None":
         return True
-
     return False
+
+
+# ==============================
+# Security risk detection
+# ==============================
+
+def assess_security_risk(device_type, open_ports, role):
+    flags = []
+    score = 0
+
+    # Riesgos por tipo de dispositivo
+    if device_type == "IoT Device":
+        flags.append("Possible insecure IoT device")
+        score += 2
+
+    if device_type == "Smart / Connected Device":
+        flags.append("Smart device needs review")
+        score += 1
+
+    if device_type == "Unknown Device":
+        flags.append("Unknown device detected")
+        score += 2
+
+    # Riesgos por puertos abiertos
+    if "445(SMB)" in open_ports:
+        flags.append("SMB exposed")
+        score += 2
+
+    if "3389(RDP)" in open_ports:
+        flags.append("RDP exposed")
+        score += 3
+
+    if "22(SSH)" in open_ports and role != "Local Host":
+        flags.append("SSH open on network device")
+        score += 1
+
+    if "554(RTSP)" in open_ports:
+        flags.append("Camera or stream service exposed")
+        score += 1
+
+    if open_ports != "None" and role == "Device":
+        flags.append("Open ports require review")
+        score += 1
+
+    # Clasificación final
+    if score >= 4:
+        risk_level = "High"
+    elif score >= 2:
+        risk_level = "Medium"
+    else:
+        risk_level = "Low"
+
+    if not flags:
+        flags = ["No obvious issues"]
+
+    return risk_level, "; ".join(flags)
 
 
 # ==============================
 # Terminal output formatting
 # ==============================
-# Esta función imprime una tabla alineada en la terminal.
 
 def print_table(devices):
     headers = [
@@ -271,11 +282,10 @@ def print_table(devices):
         "ROLE",
         "DEVICE_TYPE",
         "OS_GUESS",
-        "HOSTNAME",
         "STATE",
         "OPEN_PORTS",
-        "MAC",
-        "VENDOR"
+        "RISK_LEVEL",
+        "SECURITY_FLAGS"
     ]
 
     rows = []
@@ -285,11 +295,10 @@ def print_table(devices):
             device["role"],
             device["device_type"],
             device["os_guess"],
-            device["hostname"],
             device["state"],
             device["open_ports"],
-            device["mac"],
-            device["vendor"]
+            device["risk_level"],
+            device["security_flags"]
         ])
 
     col_widths = []
@@ -318,15 +327,6 @@ def print_table(devices):
 # ==============================
 # Main program
 # ==============================
-# Esta función:
-# 1. lee argumentos
-# 2. detecta red/gateway/IP local
-# 3. ejecuta discovery
-# 4. clasifica rol y tipo de dispositivo
-# 5. escanea puertos comunes
-# 6. corre OS detection solo cuando vale la pena
-# 7. imprime tabla
-# 8. guarda JSON y CSV
 
 def main():
     parser = argparse.ArgumentParser(description="Network Asset Discovery Tool")
@@ -347,7 +347,6 @@ def main():
     print(f"Local host IP: {local_ip}")
     print(f"Scan time: {timestamp}\n")
 
-    # Fase 1: descubrir hosts activos
     discovery_scanner.scan(hosts=network, arguments="-sn")
     discovered_hosts = discovery_scanner.all_hosts()
 
@@ -363,16 +362,19 @@ def main():
         hostname = host_data.hostname() or "N/A"
         role = determine_role(host, gateway, local_ip)
         device_type = guess_device_type(role, hostname, vendor)
-
-        # Fase 2: escanear puertos comunes
         open_ports = scan_common_ports(host)
 
-        # Fase 3: correr OS detection solo si vale la pena
         if should_run_os_detection(role, open_ports):
             raw_os_guess = detect_os_guess(host)
             os_guess = simplify_os_guess(raw_os_guess)
         else:
             os_guess = "Skipped"
+
+        risk_level, security_flags = assess_security_risk(
+            device_type=device_type,
+            open_ports=open_ports,
+            role=role
+        )
 
         device = {
             "ip": host,
@@ -384,6 +386,8 @@ def main():
             "open_ports": open_ports,
             "mac": mac,
             "vendor": vendor,
+            "risk_level": risk_level,
+            "security_flags": security_flags,
             "scan_time": timestamp
         }
 
@@ -410,6 +414,8 @@ def main():
                 "open_ports",
                 "mac",
                 "vendor",
+                "risk_level",
+                "security_flags",
                 "scan_time"
             ]
         )

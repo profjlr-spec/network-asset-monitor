@@ -4,7 +4,7 @@
 # Estas librerías permiten:
 # - ejecutar Nmap desde Python
 # - guardar resultados en JSON y CSV
-# - aceptar argumentos de terminal
+# - aceptar argumentos desde la terminal
 # - ejecutar comandos de Linux
 # - trabajar con redes/IPs
 # - agregar fecha y hora al escaneo
@@ -182,6 +182,37 @@ def scan_common_ports(host):
 
 
 # ==============================
+# OS detection
+# ==============================
+# Esta función intenta adivinar el sistema operativo del host.
+#
+# Usa:
+# -O              -> OS detection
+# --osscan-guess  -> intento más agresivo de adivinar el OS
+# -Pn             -> tratar el host como activo
+#
+# IMPORTANTE:
+# requiere sudo para funcionar mejor.
+
+def detect_os_guess(host):
+    try:
+        os_scanner = nmap.PortScanner()
+        os_scanner.scan(hosts=host, arguments="-Pn -O --osscan-guess")
+
+        if host in os_scanner.all_hosts():
+            os_matches = os_scanner[host].get("osmatch", [])
+
+            if os_matches:
+                # Tomamos la mejor coincidencia
+                return os_matches[0].get("name", "Unknown")
+
+    except Exception:
+        pass
+
+    return "Unknown"
+
+
+# ==============================
 # Terminal output formatting
 # ==============================
 # Esta función imprime una tabla alineada en la terminal.
@@ -191,6 +222,7 @@ def print_table(devices):
         "IP",
         "ROLE",
         "DEVICE_TYPE",
+        "OS_GUESS",
         "HOSTNAME",
         "STATE",
         "OPEN_PORTS",
@@ -204,6 +236,7 @@ def print_table(devices):
             device["ip"],
             device["role"],
             device["device_type"],
+            device["os_guess"],
             device["hostname"],
             device["state"],
             device["open_ports"],
@@ -242,9 +275,10 @@ def print_table(devices):
 # 2. detecta red/gateway/IP local
 # 3. ejecuta discovery
 # 4. clasifica rol y tipo de dispositivo
-# 5. escanea puertos comunes con nombre de servicio
-# 6. imprime tabla
-# 7. guarda JSON y CSV
+# 5. escanea puertos comunes
+# 6. intenta detectar sistema operativo
+# 7. imprime tabla
+# 8. guarda JSON y CSV
 
 def main():
     parser = argparse.ArgumentParser(description="Network Asset Discovery Tool")
@@ -282,13 +316,17 @@ def main():
         role = determine_role(host, gateway, local_ip)
         device_type = guess_device_type(role, hostname, vendor)
 
-        # Fase 2: escanear puertos comunes y traducir servicios
+        # Fase 2: escanear puertos comunes
         open_ports = scan_common_ports(host)
+
+        # Fase 3: intentar detectar el sistema operativo
+        os_guess = detect_os_guess(host)
 
         device = {
             "ip": host,
             "role": role,
             "device_type": device_type,
+            "os_guess": os_guess,
             "hostname": hostname,
             "state": host_data.state(),
             "open_ports": open_ports,
@@ -314,6 +352,7 @@ def main():
                 "ip",
                 "role",
                 "device_type",
+                "os_guess",
                 "hostname",
                 "state",
                 "open_ports",

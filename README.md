@@ -1,59 +1,83 @@
 # Network Asset Discovery Tool
 
-A Python-based network scanning tool that discovers devices on a local network and collects basic asset information.
+A Python-based network discovery and inventory tool designed for IT, networking, and cybersecurity learning.
 
-This project was built as part of a personal learning path in:
+This tool scans a local network and builds a simple inventory of connected devices including IP addresses, device roles, open ports, and operating system guesses.
 
-- Linux
-- Networking
+The goal of this project is to practice:
+
+- Linux networking
 - Python scripting
-- IT automation
-- Cybersecurity fundamentals
-
-The tool automatically scans a local network, identifies active hosts, detects device characteristics, and exports the results.
+- automation
+- network enumeration
+- cybersecurity fundamentals
 
 ---
 
 # Features
 
-The tool currently performs two main phases:
+The tool performs multiple analysis phases to discover and analyze devices on a network.
 
-### Phase 1 — Network Discovery
+## Phase 1 — Network Discovery
 
-- Detects the **local network automatically**
-- Detects the **default gateway**
-- Detects the **local host IP**
-- Uses **Nmap host discovery** to find active devices
+- Automatically detects the local network
+- Detects the default gateway
+- Detects the local host IP
+- Uses Nmap ping scan to identify active hosts
 
-### Phase 2 — Asset Identification
+## Phase 2 — Device Classification
 
-For each discovered host the tool collects:
+For every discovered host the tool identifies:
 
 - IP address
-- Device role (Gateway / Local Host / Device)
-- Guessed device type
-- Hostname (when available)
-- Host state
+- device role (Gateway, Local Host, Device)
+- guessed device type
+- hostname
+- device state
 - MAC address
-- Vendor (when available)
+- hardware vendor
 
-### Phase 3 — Basic Port Scanning
+## Phase 3 — Common Port Scanning
 
-The tool scans a small set of **common service ports**:
+The tool scans common ports:
 
-| Port | Service |
-|-----|------|
-22 | SSH
-53 | DNS
-80 | HTTP
-443 | HTTPS
-445 | SMB
-3389 | RDP
-554 | RTSP
+- 22 (SSH)
+- 53 (DNS)
+- 80 (HTTP)
+- 443 (HTTPS)
+- 445 (SMB)
+- 3389 (RDP)
+- 554 (RTSP)
 
-Detected ports are displayed with their **service name**.
+Ports are displayed with their common service name.
 
 Example:
+
+80(HTTP), 443(HTTPS)
+
+## Phase 4 — Selective OS Detection
+
+Operating system detection is performed using Nmap OS fingerprinting.
+
+To keep the scan fast, OS detection only runs when:
+
+- the device is the Gateway
+- the device is the Local Host
+- the device has open ports
+
+If OS detection is skipped the table shows:
+
+Skipped
+
+OS results are simplified for readability.
+
+Examples:
+
+Linux  
+Windows  
+macOS / iOS  
+Router / Network OS  
+Unknown
 
 ---
 
@@ -65,115 +89,121 @@ Below is an example scan of the tool running on a local network.
 
 Example terminal output:
 
+IP          ROLE        DEVICE_TYPE               OS_GUESS  HOSTNAME  STATE  OPEN_PORTS
+----------  ----------  ------------------------  --------  --------  -----  -----------------------------
+10.0.0.1    Gateway     Gateway / Router          Linux     _gateway  up     53(DNS), 80(HTTP), 443(HTTPS)
+10.0.0.57   Device      Computer / Laptop         Skipped   N/A       up     None
+10.0.0.221  Local Host  Local Computer            Linux     Friday    up     None
+
+The scan results are also exported to files.
+
 ---
 
 # Output Files
 
-The tool automatically exports scan results to:
+After each scan the tool generates:
 
-### JSON
+scan_results.json  
+scan_results.csv
 
+These files allow the scan data to be used for:
 
-Useful for:
-
-- automation
-- scripting
-- integrations
-
-### CSV
-
-Useful for:
-
-- spreadsheets
+- asset inventory
 - reporting
-- asset inventory tracking
+- automation
+- analysis
 
 ---
 
 # Requirements
 
-The following tools must be installed:
+This tool requires:
 
-### Python
+Python 3  
+Nmap  
 
-Python 3.10+
+Python libraries:
 
-### Nmap
-
-Install with:
-
-### Python library
+python-nmap
 
 ---
 
 # Installation
 
 Clone the repository:
-git clone https://github.com/profjlr-spec/network-asset-discovery.git
 
-Enter the project directory:
+git clone https://github.com/profjlr-spec/network-asset-discovery.git  
 cd network-asset-discovery
 
 Create a virtual environment:
+
 python3 -m venv venv
 
-Activate the virtual environment:
+Activate it:
+
 source venv/bin/activate
 
-Install requirements:
+Install dependencies:
+
 pip install -r requirements.txt
 
+Install Nmap if needed:
+
+sudo apt install nmap
+
 ---
 
-# Running the Tool
+# Usage
 
-Basic scan:
+Run the tool with automatic network detection:
+
 sudo ./venv/bin/python discovery.py
 
-Or scan a specific network:
-sudo ./venv/bin/python discovery.py --network 10.0.0.0/24
+You can also scan a specific network:
+
+sudo ./venv/bin/python discovery.py --network 192.168.1.0/24
 
 ---
 
-# Project Structure
-network-asset-discovery
-│
-├── discovery.py
-├── README.md
-├── LEARNING_NOTES.md
-├── requirements.txt
-├── example_scan.png
-├── scan_results.json
-├── scan_results.csv
-└── venv/
+# Project Purpose
 
----
-
-# Learning Goals of This Project
-
-This project was created to practice:
+This project was built as a learning exercise to develop skills in:
 
 - Python scripting
-- Network discovery
-- Nmap automation
-- Device fingerprinting
-- Port scanning basics
-- Data export automation
+- Linux networking
+- network discovery
+- IT automation
+- cybersecurity fundamentals
+
+---
+
+# Learning Goals
+
+The project demonstrates practical use of:
+
+- Nmap automation with Python
+- network host discovery
+- port scanning
+- OS fingerprinting
+- structured data export (JSON / CSV)
 
 ---
 
 # Future Improvements
 
-Planned improvements include:
+Possible future versions may include:
 
-- OS detection
-- HTML reporting
-- better device fingerprinting
-- larger port scanning options
+- service detection
+- device fingerprinting improvements
+- vulnerability detection
+- web dashboard
 - network topology mapping
+- automated asset inventory system
 
 ---
 
-# License
+# Author
 
-This project is for educational purposes.
+Juan Ramos
+
+IT Support / Linux / Networking / Cybersecurity Learning Project

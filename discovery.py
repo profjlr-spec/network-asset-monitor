@@ -185,14 +185,6 @@ def scan_common_ports(host):
 # OS detection
 # ==============================
 # Esta función intenta adivinar el sistema operativo del host.
-#
-# Usa:
-# -O              -> OS detection
-# --osscan-guess  -> intento más agresivo de adivinar el OS
-# -Pn             -> tratar el host como activo
-#
-# IMPORTANTE:
-# requiere sudo para funcionar mejor.
 
 def detect_os_guess(host):
     try:
@@ -203,13 +195,69 @@ def detect_os_guess(host):
             os_matches = os_scanner[host].get("osmatch", [])
 
             if os_matches:
-                # Tomamos la mejor coincidencia
                 return os_matches[0].get("name", "Unknown")
 
     except Exception:
         pass
 
     return "Unknown"
+
+
+# ==============================
+# OS guess simplification
+# ==============================
+# Resume la salida larga de Nmap para una tabla más limpia.
+
+def simplify_os_guess(os_guess):
+    guess = os_guess.lower()
+
+    if guess == "unknown":
+        return "Unknown"
+
+    if "windows" in guess or "microsoft" in guess:
+        return "Windows"
+
+    if "mac os" in guess or "macos" in guess or "darwin" in guess or "ios" in guess:
+        return "macOS / iOS"
+
+    if "embedded" in guess and "linux" in guess:
+        return "Embedded Linux"
+
+    if "linux" in guess:
+        return "Linux"
+
+    if "router" in guess or "switch" in guess or "network" in guess or "cisco" in guess:
+        return "Router / Network OS"
+
+    if "printer" in guess:
+        return "Printer"
+
+    if "bsd" in guess:
+        return "BSD / Unix-like"
+
+    return "Other / Unknown"
+
+
+# ==============================
+# OS detection decision
+# ==============================
+# Esta función decide si vale la pena correr OS detection.
+#
+# Solo lo hacemos si:
+# - el host es Gateway
+# - el host es Local Host
+# - el host tiene puertos abiertos
+#
+# Esto hace el script mucho más rápido.
+
+def should_run_os_detection(role, open_ports):
+    if role in ["Gateway", "Local Host"]:
+        return True
+
+    if open_ports != "None":
+        return True
+
+    return False
 
 
 # ==============================
@@ -276,7 +324,7 @@ def print_table(devices):
 # 3. ejecuta discovery
 # 4. clasifica rol y tipo de dispositivo
 # 5. escanea puertos comunes
-# 6. intenta detectar sistema operativo
+# 6. corre OS detection solo cuando vale la pena
 # 7. imprime tabla
 # 8. guarda JSON y CSV
 
@@ -319,8 +367,12 @@ def main():
         # Fase 2: escanear puertos comunes
         open_ports = scan_common_ports(host)
 
-        # Fase 3: intentar detectar el sistema operativo
-        os_guess = detect_os_guess(host)
+        # Fase 3: correr OS detection solo si vale la pena
+        if should_run_os_detection(role, open_ports):
+            raw_os_guess = detect_os_guess(host)
+            os_guess = simplify_os_guess(raw_os_guess)
+        else:
+            os_guess = "Skipped"
 
         device = {
             "ip": host,

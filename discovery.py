@@ -14,6 +14,10 @@ from datetime import datetime
 # ==============================
 # Network detection functions
 # ==============================
+# Esta función detecta automáticamente:
+# - la red local
+# - el gateway
+# - la IP local del equipo actual
 
 def detect_network_gateway_and_local_ip():
     try:
@@ -42,6 +46,10 @@ def detect_network_gateway_and_local_ip():
 # ==============================
 # Device role classification
 # ==============================
+# Esta función clasifica el rol del dispositivo:
+# - Gateway
+# - Local Host
+# - Device
 
 def determine_role(ip, gateway, local_ip):
     if ip == gateway:
@@ -54,6 +62,11 @@ def determine_role(ip, gateway, local_ip):
 # ==============================
 # Device type guessing
 # ==============================
+# Esta función intenta adivinar el tipo de dispositivo
+# basándose en:
+# - rol
+# - hostname
+# - vendor
 
 def guess_device_type(role, hostname, vendor):
     hostname_lower = hostname.lower() if hostname != "N/A" else ""
@@ -110,16 +123,19 @@ def guess_device_type(role, hostname, vendor):
 # ==============================
 # Port to service mapping
 # ==============================
+# Esta función traduce un puerto conocido a su servicio más común.
 
 def get_service_name(port):
     port_map = {
+        21: "FTP",
         22: "SSH",
+        23: "TELNET",
         53: "DNS",
         80: "HTTP",
         443: "HTTPS",
         445: "SMB",
-        3389: "RDP",
         554: "RTSP",
+        3389: "RDP",
         8080: "HTTP-Alt"
     }
     return port_map.get(port, "Unknown")
@@ -128,9 +144,11 @@ def get_service_name(port):
 # ==============================
 # Common port scanning
 # ==============================
+# Esta función revisa algunos puertos comunes para un host.
+# Usa un scanner separado para no sobrescribir el discovery.
 
 def scan_common_ports(host):
-    common_ports = "22,53,80,443,445,3389,554,8080"
+    common_ports = "21,22,23,53,80,443,445,554,3389,8080"
     open_ports = []
 
     try:
@@ -161,6 +179,7 @@ def scan_common_ports(host):
 # ==============================
 # OS detection
 # ==============================
+# Esta función intenta adivinar el sistema operativo del host.
 
 def detect_os_guess(host):
     try:
@@ -181,6 +200,7 @@ def detect_os_guess(host):
 # ==============================
 # OS guess simplification
 # ==============================
+# Resume la salida larga de Nmap para una tabla más limpia.
 
 def simplify_os_guess(os_guess):
     guess = os_guess.lower()
@@ -208,6 +228,10 @@ def simplify_os_guess(os_guess):
 # ==============================
 # OS detection decision
 # ==============================
+# Solo corre OS detection si vale la pena:
+# - Gateway
+# - Local Host
+# - Dispositivos con puertos abiertos
 
 def should_run_os_detection(role, open_ports):
     if role in ["Gateway", "Local Host"]:
@@ -220,11 +244,15 @@ def should_run_os_detection(role, open_ports):
 # ==============================
 # Security risk detection
 # ==============================
+# Esta función asigna un nivel de riesgo y banderas
+# básicas de seguridad según el tipo de dispositivo,
+# puertos abiertos y rol.
 
 def assess_security_risk(device_type, open_ports, role):
     flags = []
     score = 0
 
+    # Riesgos por tipo de dispositivo
     if device_type == "IoT Device":
         flags.append("Possible insecure IoT device")
         score += 2
@@ -237,12 +265,25 @@ def assess_security_risk(device_type, open_ports, role):
         flags.append("Unknown device detected")
         score += 2
 
-    if "445(SMB)" in open_ports:
+    # Riesgos por puertos abiertos
+    if "21(FTP)" in open_ports:
+        flags.append("Insecure FTP service exposed")
+        score += 3
+
+    if "23(TELNET)" in open_ports:
+        flags.append("Telnet is insecure and should not be exposed")
+        score += 4
+
+    if "445(SMB)" in open_ports and role != "Local Host":
+        flags.append("SMB exposed to network")
+        score += 3
+
+    if "445(SMB)" in open_ports and role == "Local Host":
         flags.append("SMB exposed")
         score += 2
 
     if "3389(RDP)" in open_ports:
-        flags.append("RDP exposed")
+        flags.append("RDP exposed - potential brute force target")
         score += 3
 
     if "22(SSH)" in open_ports and role != "Local Host":
@@ -257,6 +298,7 @@ def assess_security_risk(device_type, open_ports, role):
         flags.append("Open ports require review")
         score += 1
 
+    # Clasificación final
     if score >= 4:
         risk_level = "High"
     elif score >= 2:
@@ -273,6 +315,8 @@ def assess_security_risk(device_type, open_ports, role):
 # ==============================
 # Scan history loading
 # ==============================
+# Carga el escaneo anterior para poder comparar
+# cambios en la red.
 
 def load_previous_scan():
     try:
@@ -285,6 +329,8 @@ def load_previous_scan():
 # ==============================
 # Scan history saving
 # ==============================
+# Guarda el escaneo actual para usarlo como
+# referencia en el próximo escaneo.
 
 def save_current_scan(devices):
     with open("previous_scan.json", "w") as file:
@@ -294,6 +340,10 @@ def save_current_scan(devices):
 # ==============================
 # Device change detection
 # ==============================
+# Compara el escaneo anterior con el actual para
+# detectar:
+# - dispositivos nuevos
+# - dispositivos que ya no están
 
 def detect_network_changes(previous_devices, current_devices):
     previous_ips = {device["ip"] for device in previous_devices}
@@ -328,7 +378,10 @@ def detect_service_changes(previous_devices, current_devices):
     previous_map = {device["ip"]: device for device in previous_devices}
     current_map = {device["ip"]: device for device in current_devices}
 
-    shared_ips = sorted(set(previous_map.keys()) & set(current_map.keys()), key=ipaddress.ip_address)
+    shared_ips = sorted(
+        set(previous_map.keys()) & set(current_map.keys()),
+        key=ipaddress.ip_address
+    )
 
     changes_found = False
 
@@ -367,6 +420,7 @@ def detect_service_changes(previous_devices, current_devices):
 # ==============================
 # Terminal output formatting
 # ==============================
+# Esta función imprime una tabla alineada en la terminal.
 
 def print_table(devices):
     headers = [
@@ -419,6 +473,16 @@ def print_table(devices):
 # ==============================
 # Main program
 # ==============================
+# Flujo:
+# 1. detectar red/gateway/IP local
+# 2. discovery de hosts
+# 3. clasificar dispositivos
+# 4. escanear puertos
+# 5. detectar OS selectivamente
+# 6. evaluar riesgo
+# 7. imprimir tabla
+# 8. comparar con scan anterior
+# 9. guardar scan actual
 
 def main():
     parser = argparse.ArgumentParser(description="Network Asset Discovery Tool")

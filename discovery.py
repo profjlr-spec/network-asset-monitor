@@ -1,6 +1,13 @@
 # ==============================
 # Imports
 # ==============================
+# Estas librerías permiten:
+# - ejecutar Nmap desde Python
+# - guardar resultados en JSON y CSV
+# - aceptar argumentos desde la terminal
+# - ejecutar comandos de Linux
+# - trabajar con redes/IPs
+# - agregar fecha y hora al escaneo
 
 import nmap
 import json
@@ -14,6 +21,10 @@ from datetime import datetime
 # ==============================
 # Network detection functions
 # ==============================
+# Esta función detecta automáticamente:
+# - la red local
+# - el gateway
+# - la IP local del equipo actual
 
 def detect_network_gateway_and_local_ip():
     try:
@@ -42,6 +53,10 @@ def detect_network_gateway_and_local_ip():
 # ==============================
 # Device role classification
 # ==============================
+# Esta función clasifica el rol del dispositivo:
+# - Gateway
+# - Local Host
+# - Device
 
 def determine_role(ip, gateway, local_ip):
     if ip == gateway:
@@ -54,6 +69,11 @@ def determine_role(ip, gateway, local_ip):
 # ==============================
 # Device type guessing
 # ==============================
+# Esta función intenta adivinar el tipo de dispositivo
+# basándose en:
+# - rol
+# - hostname
+# - vendor
 
 def guess_device_type(role, hostname, vendor):
     hostname_lower = hostname.lower() if hostname != "N/A" else ""
@@ -110,6 +130,7 @@ def guess_device_type(role, hostname, vendor):
 # ==============================
 # Port to service mapping
 # ==============================
+# Esta función traduce un puerto conocido a su servicio más común.
 
 def get_service_name(port):
     port_map = {
@@ -127,6 +148,8 @@ def get_service_name(port):
 # ==============================
 # Common port scanning
 # ==============================
+# Esta función revisa algunos puertos comunes para un host.
+# Usa un scanner separado para no sobrescribir el discovery.
 
 def scan_common_ports(host):
     common_ports = "22,53,80,443,445,3389,554"
@@ -160,6 +183,7 @@ def scan_common_ports(host):
 # ==============================
 # OS detection
 # ==============================
+# Esta función intenta adivinar el sistema operativo del host.
 
 def detect_os_guess(host):
     try:
@@ -180,6 +204,7 @@ def detect_os_guess(host):
 # ==============================
 # OS guess simplification
 # ==============================
+# Resume la salida larga de Nmap para una tabla más limpia.
 
 def simplify_os_guess(os_guess):
     guess = os_guess.lower()
@@ -207,6 +232,10 @@ def simplify_os_guess(os_guess):
 # ==============================
 # OS detection decision
 # ==============================
+# Solo corre OS detection si vale la pena:
+# - Gateway
+# - Local Host
+# - Dispositivos con puertos abiertos
 
 def should_run_os_detection(role, open_ports):
     if role in ["Gateway", "Local Host"]:
@@ -219,12 +248,14 @@ def should_run_os_detection(role, open_ports):
 # ==============================
 # Security risk detection
 # ==============================
+# Esta función asigna un nivel de riesgo y banderas
+# básicas de seguridad según el tipo de dispositivo,
+# puertos abiertos y rol.
 
 def assess_security_risk(device_type, open_ports, role):
     flags = []
     score = 0
 
-    # Riesgos por tipo de dispositivo
     if device_type == "IoT Device":
         flags.append("Possible insecure IoT device")
         score += 2
@@ -237,7 +268,6 @@ def assess_security_risk(device_type, open_ports, role):
         flags.append("Unknown device detected")
         score += 2
 
-    # Riesgos por puertos abiertos
     if "445(SMB)" in open_ports:
         flags.append("SMB exposed")
         score += 2
@@ -258,7 +288,6 @@ def assess_security_risk(device_type, open_ports, role):
         flags.append("Open ports require review")
         score += 1
 
-    # Clasificación final
     if score >= 4:
         risk_level = "High"
     elif score >= 2:
@@ -273,8 +302,63 @@ def assess_security_risk(device_type, open_ports, role):
 
 
 # ==============================
+# Scan history loading
+# ==============================
+# Carga el escaneo anterior para poder comparar
+# cambios en la red.
+
+def load_previous_scan():
+    try:
+        with open("previous_scan.json", "r") as file:
+            return json.load(file)
+    except Exception:
+        return []
+
+
+# ==============================
+# Scan history saving
+# ==============================
+# Guarda el escaneo actual para usarlo como
+# referencia en el próximo escaneo.
+
+def save_current_scan(devices):
+    with open("previous_scan.json", "w") as file:
+        json.dump(devices, file, indent=4)
+
+
+# ==============================
+# Network change detection
+# ==============================
+# Compara el escaneo anterior con el actual para
+# detectar:
+# - dispositivos nuevos
+# - dispositivos que ya no están
+
+def detect_network_changes(previous_devices, current_devices):
+    previous_ips = {device["ip"] for device in previous_devices}
+    current_ips = {device["ip"] for device in current_devices}
+
+    new_ips = current_ips - previous_ips
+    missing_ips = previous_ips - current_ips
+
+    if new_ips:
+        print("\nNEW DEVICES DETECTED:")
+        for ip in sorted(new_ips, key=ipaddress.ip_address):
+            print(f" + {ip}")
+
+    if missing_ips:
+        print("\nDEVICES NO LONGER PRESENT:")
+        for ip in sorted(missing_ips, key=ipaddress.ip_address):
+            print(f" - {ip}")
+
+    if not new_ips and not missing_ips:
+        print("\nNo network changes detected since the previous scan.")
+
+
+# ==============================
 # Terminal output formatting
 # ==============================
+# Esta función imprime una tabla alineada en la terminal.
 
 def print_table(devices):
     headers = [
@@ -327,6 +411,16 @@ def print_table(devices):
 # ==============================
 # Main program
 # ==============================
+# Flujo:
+# 1. detectar red/gateway/IP local
+# 2. discovery de hosts
+# 3. clasificar dispositivos
+# 4. escanear puertos
+# 5. detectar OS selectivamente
+# 6. evaluar riesgo
+# 7. imprimir tabla
+# 8. comparar con scan anterior
+# 9. guardar scan actual
 
 def main():
     parser = argparse.ArgumentParser(description="Network Asset Discovery Tool")
@@ -350,6 +444,7 @@ def main():
     discovery_scanner.scan(hosts=network, arguments="-sn")
     discovered_hosts = discovery_scanner.all_hosts()
 
+    previous_scan = load_previous_scan()
     devices = []
 
     for host in discovered_hosts:
@@ -397,6 +492,9 @@ def main():
 
     print("Devices discovered:\n")
     print_table(devices)
+
+    detect_network_changes(previous_scan, devices)
+    save_current_scan(devices)
 
     with open("scan_results.json", "w") as json_file:
         json.dump(devices, json_file, indent=4)

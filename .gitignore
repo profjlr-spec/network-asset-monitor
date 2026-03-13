@@ -1,6 +1,11 @@
-venv/
+# Python
 __pycache__/
 *.pyc
 
-scan_results.json
-scan_results.csv
+# Virtual environment
+venv/
+
+# Scan data (generated files)
+data/scan_results.json
+data/scan_results.csv
+data/previous_scan.json

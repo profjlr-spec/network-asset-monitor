@@ -6,6 +6,14 @@ This project simulates capabilities commonly found in cybersecurity tools used b
 
 --------------------------------------------------
 
+SCREENSHOT
+
+Example terminal output:
+
+![Example Scan](screenshots/example_scan.png)
+
+--------------------------------------------------
+
 PROJECT OVERVIEW
 
 The tool scans a network to discover connected devices and analyze their characteristics.
@@ -138,7 +146,7 @@ Examples:
 
 RTSP (554) → camera stream  
 HTTP / HTTPS admin interfaces  
-Embedded web servers
+Embedded web servers  
 
 Example detection:
 
@@ -181,12 +189,40 @@ This helps detect configuration changes or suspicious activity.
 
 --------------------------------------------------
 
+PROJECT STRUCTURE
+
+network-asset-discovery/
+│
+├── discovery.py
+├── requirements.txt
+├── README.md
+├── .gitignore
+│
+├── docs/
+│   ├── ARCHITECTURE.md
+│   ├── INTERVIEW_NOTES.md
+│   └── LEARNING_NOTES.md
+│
+├── screenshots/
+│   └── example_scan.png
+│
+└── data/
+    ├── scan_results.json
+    ├── scan_results.csv
+    └── previous_scan.json
+
+--------------------------------------------------
+
 OUTPUT FILES
 
 Scan results are exported to:
 
-scan_results.json  
-scan_results.csv  
+data/scan_results.json  
+data/scan_results.csv  
+
+Previous state is stored in:
+
+data/previous_scan.json  
 
 These files allow further analysis or integration with other tools.
 
@@ -207,6 +243,16 @@ socket
 ssl  
 ipaddress  
 datetime  
+
+--------------------------------------------------
+
+DOCUMENTATION
+
+Additional project documentation is available in:
+
+docs/ARCHITECTURE.md  
+docs/INTERVIEW_NOTES.md  
+docs/LEARNING_NOTES.md  
 
 --------------------------------------------------
 
@@ -231,6 +277,34 @@ EXAMPLE OUTPUT
 IP          ROLE        DEVICE_TYPE               OS_GUESS  STATE  OPEN_PORTS                     RISK_LEVEL
 10.0.0.1    Gateway     Gateway / Router          Linux     up     53(DNS),80(HTTP),443(HTTPS)   Low
 10.0.0.221  Local Host  Workstation               Linux     up     None                           Low
+
+--------------------------------------------------
+
+SETUP
+
+Create a virtual environment:
+
+python3 -m venv venv
+
+Activate it:
+
+source venv/bin/activate
+
+Install dependencies:
+
+pip install -r requirements.txt
+
+Install Nmap if needed:
+
+sudo apt install nmap
+
+--------------------------------------------------
+
+RUN
+
+Run the tool with sudo so Nmap and socket-based checks work correctly:
+
+sudo ./venv/bin/python discovery.py
 
 --------------------------------------------------
 

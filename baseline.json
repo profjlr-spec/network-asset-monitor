@@ -1,0 +1,57 @@
+{
+  "created_at": "2026-03-14T18:43:55",
+  "updated_at": "2026-03-14T18:47:37",
+  "devices": {
+    "ip:10.0.0.1": {
+      "ip": "10.0.0.1",
+      "mac": null,
+      "hostname": null,
+      "role": "Device",
+      "device_type": "Unknown Device",
+      "os_guess": "Unknown",
+      "state": "up",
+      "open_ports": [
+        53,
+        80,
+        443
+      ],
+      "banners": {
+        "443": "ssl/https Xfinity Broadband Router Server",
+        "53": "domain dnsmasq 2.83",
+        "80": "http Xfinity Broadband Router Server"
+      },
+      "risk_level": "Medium",
+      "security_flags": []
+    },
+    "ip:10.0.0.220": {
+      "ip": "10.0.0.220",
+      "mac": null,
+      "hostname": null,
+      "role": "Device",
+      "device_type": "Unknown Device",
+      "os_guess": "Unknown",
+      "state": "up",
+      "open_ports": [],
+      "banners": {},
+      "risk_level": "Low",
+      "security_flags": [
+        "No obvious issues"
+      ]
+    },
+    "ip:10.0.0.221": {
+      "ip": "10.0.0.221",
+      "mac": null,
+      "hostname": null,
+      "role": "Device",
+      "device_type": "Unknown Device",
+      "os_guess": "Unknown",
+      "state": "up",
+      "open_ports": [],
+      "banners": {},
+      "risk_level": "Low",
+      "security_flags": [
+        "No obvious issues"
+      ]
+    }
+  }
+}

@@ -1,0 +1,6 @@
+ip,role,device_type,os_guess,hostname,state,open_ports,banners,mac,vendor,risk_level,security_flags,scan_time
+10.0.0.1,Gateway,Gateway / Router,Unknown,_gateway,up,"53(DNS), 80(HTTP), 443(HTTPS)",80:Server: Xfinity Broadband Router Server | 443:Server: Xfinity Broadband Router Server,N/A,N/A,Low,No obvious issues,2026-03-14 15:30:34
+10.0.0.66,Device,Unknown Device,Skipped,N/A,up,None,None,N/A,N/A,Low,Unknown device detected,2026-03-14 15:30:34
+10.0.0.175,Device,Web Server / Admin Interface,Unknown,N/A,up,443(HTTPS),None,N/A,N/A,Low,Web interface exposed on device; Open ports require review,2026-03-14 15:30:34
+10.0.0.220,Device,Unknown Device,Skipped,N/A,up,None,None,N/A,N/A,Low,Unknown device detected,2026-03-14 15:30:34
+10.0.0.221,Local Host,Workstation,Unknown,Friday-lab,up,None,None,N/A,N/A,Low,No obvious issues,2026-03-14 15:30:34
